@@ -1,5 +1,130 @@
 # go-ipfs changelog
 
+### 0.4.11-rc1 2017-09-14
+
+Ipfs 0.4.11 is larger release that brings many long awaited features and
+performance improvements. These include new datastore options, more efficient
+bitswap transfers, circuit relay support, ipld plugins and more! Take a look
+at the full changelog below for a detailed list of every change.
+
+The ipfs datastore has, until now, been a combination of leveldb and a custom
+git-like storage backend called 'flatfs'. This works well enough for the
+average user, but different ipfs usecases demand different backend
+configurations. To address this, we have changed the configuration file format
+for datastores to be a modular way of specifying exactly how you want the
+datastore to be structured. You will now be able to configure ipfs to use
+flatfs, leveldb, badger, an in memory datastore, and more to suit your needs.
+
+Bitswap received some much needed attention during this release cycle. The
+concept of 'Bitswap Sessions' allows bitswap to associate requests for
+different blocks to the same underlying session, and from that infer better
+ways of requesting that data. In more concrete terms, parts of the ipfs
+codebase that take advantage of sessions (currently, only `ipfs pin add`) will
+cause much less extra traffic than before. This is done by making optimistic
+guesses about which nodes might be providing given blocks and not sending
+wantlist updates to every connected bitswap partner, as well as searching the
+DHT for providers less frequently. In future releases we will migrate more ipfs
+commands over to take advantage of bitswap sessions. As nodes update to this
+and future versions, expect to see idle bandwidth usage on the ipfs network to
+go down noticably.
+
+It is often said that NAT traversal is the hardest problem in peer to peer
+technology, we tend to agree with this. In an effort to provide a more
+ubiquitous p2p mesh, we have implemented a relay mechanism that allows willing
+peers to relay traffic for other peers who might not otherwise be able to
+communicate.  This feature is still pretty early, and currently users have to
+manually connect through a relay. The next step in this endeavour is automatic
+relaying, and research for this is currently in progress. We expect that when
+it lands, it will improve the perceived performance of ipfs by spending less
+time attempting connections to hard to reach nodes.
+
+The last feature we want to highlight (but by no means the last feature in
+this release) is our new plugin system. There are many different workflows and
+usecases that ipfs should be able to support, but not everyone wants to be able
+to use every feature. We could simply merge in all these features, but that
+causes problems for several reasons: first off, the size of the ipfs binary
+starts to get very large very quickly. Second, each of these different pieces
+need to be maintained and updated independently, which would cause significant
+churn in the codebase. To address this, we have come up with a system that
+allows users to install plugins to the vanilla ipfs daemon that augment its
+capabilities. The first of these plugins are a [git
+plugin](https://github.com/ipfs/go-ipfs/blob/master/plugin/plugins/git/git.go)
+that allows ipfs to natively address git objects, and an [ethereum
+plugin](https://github.com/ipfs/go-ipld-eth) that lets ipfs ingest and operate
+on all ethereum blockchain data. Soon to come are plugins for the bitcoin and
+zcash data formats. In the future, we will be adding plugins for other things
+like datastore backends and specialized libp2p network transports.
+
+Finally, I would like to thank all of our contributors, users, supporters and
+friends for helping us along the way. Ipfs would not be where it is without
+you. 
+
+
+- Features
+  - Add support to `ipfs add` for specifying the hash function ([ipfs/go-ipfs#3919](https://github.com/ipfs/go-ipfs/pull/3919))
+  - Implement ipfs key {rm, rename} ([ipfs/go-ipfs#3892](https://github.com/ipfs/go-ipfs/pull/3892))
+  - Implement ipfs shutdown command ([ipfs/go-ipfs#3884](https://github.com/ipfs/go-ipfs/pull/3884))
+  - Implement ipfs pin update ([ipfs/go-ipfs#3846](https://github.com/ipfs/go-ipfs/pull/3846))
+  - Add "--file-order" option to "filestore ls" and "verify" ([ipfs/go-ipfs#3938](https://github.com/ipfs/go-ipfs/pull/3938))
+  - Add MaxStorage field to output of `ipfs repo stat` ([ipfs/go-ipfs#3915](https://github.com/ipfs/go-ipfs/pull/3915))
+  - Allow `ipns publish` by keystore name ([ipfs/go-ipfs#3882](https://github.com/ipfs/go-ipfs/pull/3882))
+  - Implement `ipfs pin verify` ([ipfs/go-ipfs#3843](https://github.com/ipfs/go-ipfs/pull/3843))
+  - Implement experimental `ipfs p2p` command ([ipfs/go-ipfs#3943](https://github.com/ipfs/go-ipfs/pull/3943))
+  - Add `ipfs dht findprovs --num-providers` to select number of providers to return ([ipfs/go-ipfs#3966](https://github.com/ipfs/go-ipfs/pull/3966))
+  - Add `--pin` option to `ipfs dag put` ([ipfs/go-ipfs#4004](https://github.com/ipfs/go-ipfs/pull/4004))
+  - Add `--pin` option to `ipfs object put` ([ipfs/go-ipfs#4095](https://github.com/ipfs/go-ipfs/pull/4095))
+  - Implement `--profile` option on `ipfs init` ([ipfs/go-ipfs#4001](https://github.com/ipfs/go-ipfs/pull/4001))
+  - Add CID Codecs to `ipfs block put` ([ipfs/go-ipfs#4022](https://github.com/ipfs/go-ipfs/pull/4022))
+  - Bitswap sessions ([ipfs/go-ipfs#3867](https://github.com/ipfs/go-ipfs/pull/3867))
+  - Create plugin API and loader, add ipld-git plugin ([ipfs/go-ipfs#4033](https://github.com/ipfs/go-ipfs/pull/4033))
+  - Make announced swarm addresses configurable ([ipfs/go-ipfs#3948](https://github.com/ipfs/go-ipfs/pull/3948))
+  - Reprovider strategies ([ipfs/go-ipfs#4113](https://github.com/ipfs/go-ipfs/pull/4113))
+  - Circuit Relay integration ([ipfs/go-ipfs#4091](https://github.com/ipfs/go-ipfs/pull/4091))
+  - More configurable datastore configs ([ipfs/go-ipfs#3575](https://github.com/ipfs/go-ipfs/pull/3575))
+  - Add experimental support for badger datastore ([ipfs/go-ipfs#4007](https://github.com/ipfs/go-ipfs/pull/4007))
+- Improvements
+  - Add Suborigin header to gateway responses ([ipfs/go-ipfs#3914](https://github.com/ipfs/go-ipfs/pull/3914))
+  - Clean up bitswap ledgers when disconnecting ([ipfs/go-ipfs#3437](https://github.com/ipfs/go-ipfs/pull/3437))
+  - More verbose filestore error when adding a file from outside of the root ([ipfs/go-ipfs#3964](https://github.com/ipfs/go-ipfs/pull/3964))
+  - Don't redirect gateway to trailing slash if request is a `go get` ([ipfs/go-ipfs#3963](https://github.com/ipfs/go-ipfs/pull/3963))
+  - docker: expose port 8081 for /ws listener ([ipfs/go-ipfs#3954](https://github.com/ipfs/go-ipfs/pull/3954))
+  - Ensure non-self ipns keys get republished ([ipfs/go-ipfs#3951](https://github.com/ipfs/go-ipfs/pull/3951))
+  - Add better support for Raw Nodes in MFS and elsewhere ([ipfs/go-ipfs#3996](https://github.com/ipfs/go-ipfs/pull/3996))
+  - Added file size to response of `ipfs add` command ([ipfs/go-ipfs#4082](https://github.com/ipfs/go-ipfs/pull/4082))
+  - Add /dnsaddr bootstrap nodes ([ipfs/go-ipfs#4127](https://github.com/ipfs/go-ipfs/pull/4127))
+  - Do not publish public keys extractable from ID ([ipfs/go-ipfs#4020](https://github.com/ipfs/go-ipfs/pull/4020))
+- Documentation
+  - Adding documentation that PubSub Sub can be encoded. ([ipfs/go-ipfs#3909](https://github.com/ipfs/go-ipfs/pull/3909))
+  - Add Comms items from js-ipfs, including blog ([ipfs/go-ipfs#3936](https://github.com/ipfs/go-ipfs/pull/3936))
+  - Change 'neccessary' to 'necessary' ([ipfs/go-ipfs#3941](https://github.com/ipfs/go-ipfs/pull/3941))
+  - Add Nix to the linux package managers in README ([ipfs/go-ipfs#3939](https://github.com/ipfs/go-ipfs/pull/3939))
+  - Add Developer Certificate of Origin ([ipfs/go-ipfs#4006](https://github.com/ipfs/go-ipfs/pull/4006))
+  - Add `transports.md` document ([ipfs/go-ipfs#4034](https://github.com/ipfs/go-ipfs/pull/4034))
+  - Add `experimental-features.md` document ([ipfs/go-ipfs#4036](https://github.com/ipfs/go-ipfs/pull/4036))
+  - Update release docs ([ipfs/go-ipfs#4165](https://github.com/ipfs/go-ipfs/pull/4165))
+  - Add documentation for datastore configs ([ipfs/go-ipfs#4223](https://github.com/ipfs/go-ipfs/pull/4223))
+  - General update and clean-up of docs ([ipfs/go-ipfs#4222](https://github.com/ipfs/go-ipfs/pull/4222))
+- Bugfixes
+  - Fix typo in message when file is not determined ([ipfs/go-ipfs#3895](https://github.com/ipfs/go-ipfs/pull/3895))
+  - Make odds of 'process added after close' panic less likely ([ipfs/go-ipfs#3940](https://github.com/ipfs/go-ipfs/pull/3940))
+  - Fix shutdown check in t0023 ([ipfs/go-ipfs#3969](https://github.com/ipfs/go-ipfs/pull/3969))
+  - Fix pinning of unixfs sharded directories ([ipfs/go-ipfs#3975](https://github.com/ipfs/go-ipfs/pull/3975))
+  - Show escaped url in gateway 404 message ([ipfs/go-ipfs#4005](https://github.com/ipfs/go-ipfs/pull/4005))
+  - Fix early opening of bitswap message sender ([ipfs/go-ipfs#4069](https://github.com/ipfs/go-ipfs/pull/4069))
+  - Fix determination of 'root' node in dag put ([ipfs/go-ipfs#4072](https://github.com/ipfs/go-ipfs/pull/4072))
+  - Fix bad multipart message panic in gateway ([ipfs/go-ipfs#4053](https://github.com/ipfs/go-ipfs/pull/4053))
+  - Add blocks to the blockstore before returning them from blockservice sessions ([ipfs/go-ipfs#4169](https://github.com/ipfs/go-ipfs/pull/4169))
+  - Various fixes for /ipfs fuse code ([ipfs/go-ipfs#4194](https://github.com/ipfs/go-ipfs/pull/4194))
+- General Changes and Refactorings
+  - Remove 'ipfs diag net' from codebase ([ipfs/go-ipfs#3916](https://github.com/ipfs/go-ipfs/pull/3916))
+  - Apply the megacheck code vetting tool for idiomatic go ([ipfs/go-ipfs#3949](https://github.com/ipfs/go-ipfs/pull/3949))
+  - Require go 1.8 ([ipfs/go-ipfs#4044](https://github.com/ipfs/go-ipfs/pull/4044))
+  - Change IPFS to use the new pluggable Block to IPLD decoding framework. ([ipfs/go-ipfs#4060](https://github.com/ipfs/go-ipfs/pull/4060))
+  - Remove tour command from ipfs ([ipfs/go-ipfs#4123](https://github.com/ipfs/go-ipfs/pull/4123))
+  - Add support for Go 1.9 ([ipfs/go-ipfs#4156](https://github.com/ipfs/go-ipfs/pull/4156))
+  - Remove some dead code ([ipfs/go-ipfs#4204](https://github.com/ipfs/go-ipfs/pull/4204))
+  - Switch docker image from musl to glibc ([ipfs/go-ipfs#4219](https://github.com/ipfs/go-ipfs/pull/4219))
+
 ### 0.4.10 - 2017-06-27
 
 Ipfs 0.4.10 is a patch release that contains several exciting new features,
